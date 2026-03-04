@@ -68,29 +68,25 @@ export default function DashboardPage() {
         <KPICard
           title="Total Spend"
           value="$48,500"
-          delta="+12%"
-          trend="up"
+          delta={{ percentage: 12, direction: 'up' }}
           icon="💰"
         />
         <KPICard
           title="Conversions"
           value="2,847"
-          delta="+28%"
-          trend="up"
+          delta={{ percentage: 28, direction: 'up' }}
           icon="✓"
         />
         <KPICard
           title="Avg CPA"
           value="$17.05"
-          delta="-5%"
-          trend="down"
+          delta={{ percentage: 5, direction: 'down' }}
           icon="💵"
         />
         <KPICard
           title="Avg ROAS"
           value="2.4x"
-          delta="+18%"
-          trend="up"
+          delta={{ percentage: 18, direction: 'up' }}
           icon="📈"
         />
       </div>
