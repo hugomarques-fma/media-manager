@@ -50,6 +50,21 @@ SELECT cron.schedule(
   $$
 );
 
+-- Schedule suggestion generation job to run daily at 3 AM UTC
+-- This analyzes campaign performance and generates AI suggestions
+SELECT cron.schedule(
+  'generate-suggestions-daily',
+  '0 3 * * *', -- Daily at 3 AM UTC (2 hours after metrics capture)
+  $$
+  SELECT
+    net.http_post(
+      url:='https://' || current_setting('app.settings.supabase_url') || '/functions/v1/generate-suggestions',
+      headers:=jsonb_build_object('Authorization', 'Bearer ' || current_setting('app.settings.supabase_service_key')),
+      body:=jsonb_build_object('trigger', 'cron')
+    ) as request_id;
+  $$
+);
+
 -- Add index on token_expires_at for efficient token refresh queries
 CREATE INDEX IF NOT EXISTS idx_ad_accounts_token_expires_at
 ON ad_accounts(token_expires_at)

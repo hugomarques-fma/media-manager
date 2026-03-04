@@ -59,20 +59,21 @@
 
 ---
 
-### Epic 4: AI Agent & Suggestions
+### Epic 4: AI Agent & Suggestions (55% DONE)
 - [x] useSuggestions hook
-- [ ] Edge Function for analysis
-- [ ] OpenAI/Claude API client
-- [ ] Prompt engineering
-- [ ] Anomaly detection
-- [ ] Suggestion generation
-- [ ] Campaign health score
-- [ ] Suggestions UI
-- [ ] Approval/rejection flow
-- [ ] Execution of suggestions
+- [x] Edge Function for suggestion analysis (generate-suggestions)
+- [x] Rule-based suggestion engine (no external API needed for MVP)
+- [x] Anomaly detection (Z-score based)
+- [x] Suggestion generation (7 types: budget, pause, creative, audience, bid strategy, general)
+- [x] Campaign health score calculation
+- [x] Suggestions UI component with approval flow
+- [x] Suggestions page with history tracking
+- [x] Approval/rejection workflow
+- [ ] Execute approved suggestions via API
 - [ ] Feedback & learning loop
+- [ ] Advanced anomaly detection with ML
 
-**Status:** ⏳ Design phase
+**Files Created:** 6 | **Status:** ⏳ Core intelligence complete
 
 ---
 
@@ -117,10 +118,10 @@
 | 1: Infrastructure | ✅ Done | 100% | 12 |
 | 2: Meta API | ⏳ In Progress | 85% | 12 |
 | 3: Dashboard | ⏳ In Progress | 70% | 12 |
-| 4: AI Agent | 📋 Pending | 0% | 0 |
+| 4: AI Agent | ⏳ In Progress | 55% | 6 |
 | 5: Rules | 📋 Pending | 0% | 0 |
 | 6: Notifications | 📋 Pending | 0% | 0 |
-| **TOTAL** | | **51%** | **36** |
+| **TOTAL** | | **60%** | **42** |
 
 ---
 
