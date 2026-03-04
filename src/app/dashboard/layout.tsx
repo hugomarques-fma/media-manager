@@ -1,9 +1,10 @@
 'use client';
 
 import { useAuth } from '@/lib/auth-context';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import NotificationCenter from '@/components/NotificationCenter';
 
 export default function DashboardLayout({
   children,
@@ -12,6 +13,9 @@ export default function DashboardLayout({
 }) {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(3); // Mock data
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,27 +51,53 @@ export default function DashboardLayout({
         <nav className="px-4 py-6 space-y-2">
           <Link
             href="/dashboard"
-            className="block px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium transition"
+            className={`block px-4 py-2 rounded-lg font-medium transition ${
+              pathname === '/dashboard'
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+            }`}
           >
             📊 Dashboard
           </Link>
           <Link
-            href="/campaigns"
-            className="block px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium transition"
+            href="/dashboard/analytics"
+            className={`block px-4 py-2 rounded-lg font-medium transition ${
+              pathname === '/dashboard/analytics'
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+            }`}
           >
-            📈 Campaigns
+            📈 Analytics
           </Link>
           <Link
-            href="/suggestions"
-            className="block px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium transition"
+            href="/dashboard/suggestions"
+            className={`block px-4 py-2 rounded-lg font-medium transition ${
+              pathname === '/dashboard/suggestions'
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+            }`}
           >
             💡 Suggestions
           </Link>
           <Link
-            href="/rules"
-            className="block px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium transition"
+            href="/dashboard/rules"
+            className={`block px-4 py-2 rounded-lg font-medium transition ${
+              pathname === '/dashboard/rules'
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+            }`}
           >
             ⚙️ Rules
+          </Link>
+          <Link
+            href="/dashboard/notifications"
+            className={`block px-4 py-2 rounded-lg font-medium transition ${
+              pathname === '/dashboard/notifications'
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+            }`}
+          >
+            🔔 Notifications
           </Link>
           <Link
             href="/reports"
@@ -101,13 +131,35 @@ export default function DashboardLayout({
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-8 py-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold text-gray-900">Dashboard</h2>
-            <button className="relative p-2 text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
+            <h2 className="text-2xl font-semibold text-gray-900">
+              {pathname === '/dashboard/notifications'
+                ? 'Notifications & Audit'
+                : pathname === '/dashboard/analytics'
+                  ? 'Analytics'
+                  : pathname === '/dashboard/rules'
+                    ? 'Automation Rules'
+                    : pathname === '/dashboard/suggestions'
+                      ? 'AI Suggestions'
+                      : 'Dashboard'}
+            </h2>
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2 text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+            >
               🔔
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
           </div>
         </header>
+
+        {/* Notification Center Modal */}
+        {showNotifications && (
+          <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+        )}
 
         {/* Content */}
         <div className="p-8">{children}</div>
