@@ -1,8 +1,51 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// Validate and get environment variables
+function getEnvVars(): { supabaseUrl: string; supabaseServiceKey: string; valid: boolean; error?: string } {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return {
+      supabaseUrl,
+      supabaseServiceKey,
+      valid: false,
+      error: 'Missing Supabase environment variables',
+    };
+  }
+
+  return { supabaseUrl, supabaseServiceKey, valid: true };
+}
+
+// Retry helper with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  initialDelayMs: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.warn(
+        `[sync-campaigns] Attempt ${attempt + 1} failed: ${lastError.message}. Retrying...`
+      );
+
+      if (attempt < maxRetries - 1) {
+        const delayMs = initialDelayMs * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  throw lastError || new Error('Max retries exceeded');
+}
+
+const envVars = getEnvVars();
 const metaApiVersion = 'v21.0';
 
 interface SyncResult {
@@ -53,7 +96,17 @@ async function getAdSetId(
 
 serve(async (req) => {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Validate env vars
+    if (!envVars.valid) {
+      console.error('Configuration error:', envVars.error);
+      return new Response(
+        JSON.stringify({ error: envVars.error, status: 'configuration_error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[sync-campaigns] Starting campaign synchronization');
+    const supabase = createClient(envVars.supabaseUrl, envVars.supabaseServiceKey);
 
     // Get all connected accounts
     const { data: accounts, error: accountsError } = await supabase
@@ -62,6 +115,7 @@ serve(async (req) => {
       .eq('status', 'connected');
 
     if (accountsError) {
+      console.error('[sync-campaigns] Failed to fetch accounts:', accountsError);
       return new Response(
         JSON.stringify({ error: `Failed to fetch accounts: ${accountsError.message}` }),
         { status: 500 }
@@ -83,16 +137,19 @@ serve(async (req) => {
       };
 
       try {
-        // Fetch campaigns from Meta API
+        // Fetch campaigns from Meta API with retry
         const campaignsUrl = `https://graph.instagram.com/${metaApiVersion}/act_${account.meta_account_id}/campaigns`;
-        const campaignsResponse = await fetch(
-          `${campaignsUrl}?access_token=${account.access_token}&fields=id,name,status,objective,daily_budget,budget_remaining,created_time,updated_time`
+        const campaignsResponse = await retryWithBackoff(() =>
+          fetch(
+            `${campaignsUrl}?access_token=${account.access_token}&fields=id,name,status,objective,daily_budget,budget_remaining,created_time,updated_time`
+          )
         );
 
         if (!campaignsResponse.ok) {
           result.errors.push(
             `Meta API error: ${campaignsResponse.status} ${campaignsResponse.statusText}`
           );
+          console.warn(`[sync-campaigns] Failed to fetch campaigns for account ${account.id}`);
           allResults[account.id] = result;
           continue;
         }
@@ -189,16 +246,19 @@ serve(async (req) => {
                   result.adSetsCreated++;
                 }
 
-                // Sync ads for this ad set
+                // Sync ads for this ad set with retry
                 const adsUrl = `https://graph.instagram.com/${metaApiVersion}/${adSet.id}/ads`;
-                const adsResponse = await fetch(
-                  `${adsUrl}?access_token=${account.access_token}&fields=id,name,status,creative,created_time,updated_time`
+                const adsResponse = await retryWithBackoff(() =>
+                  fetch(
+                    `${adsUrl}?access_token=${account.access_token}&fields=id,name,status,creative,created_time,updated_time`
+                  )
                 );
 
                 if (!adsResponse.ok) {
                   result.errors.push(
                     `Error fetching ads for ad set ${adSet.id}: ${adsResponse.statusText}`
                   );
+                  console.warn(`[sync-campaigns] Failed to fetch ads for ad set ${adSet.id}`);
                   continue;
                 }
 
