@@ -1,6 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.0";
 
+// Validate environment variables
+function validateEnvVars(): { valid: boolean; error?: string } {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return { valid: false, error: "Missing Supabase environment variables" };
+  }
+
+  return { valid: true };
+}
+
+const envValidation = validateEnvVars();
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";
@@ -117,6 +130,8 @@ async function generateDigestEmail(data: DigestEmail): Promise<string> {
 
 async function sendDailyDigests() {
   try {
+    console.log("[send-daily-digest] Starting daily digest sending");
+
     // Get all users with digest email enabled
     const { data: users, error: userError } = await supabase
       .from("ad_accounts")
@@ -124,7 +139,7 @@ async function sendDailyDigests() {
       .limit(100);
 
     if (userError || !users) {
-      console.error("Failed to fetch users:", userError);
+      console.error("[send-daily-digest] Failed to fetch users:", userError);
       return;
     }
 
@@ -217,11 +232,13 @@ async function sendDailyDigests() {
           }
         }
       } catch (error) {
-        console.error(`Error processing account ${account.id}:`, error);
+        console.error(`[send-daily-digest] Error processing account ${account.id}:`, error);
       }
     }
+
+    console.log("[send-daily-digest] Daily digest sending completed");
   } catch (error) {
-    console.error("Digest generation error:", error);
+    console.error("[send-daily-digest] Digest generation error:", error);
   }
 }
 
@@ -230,13 +247,33 @@ serve(async (req) => {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  await sendDailyDigests();
-
-  return new Response(
-    JSON.stringify({ success: true, message: "Daily digests sent" }),
-    {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
+  try {
+    // Validate env vars before proceeding
+    if (!envValidation.valid) {
+      console.error("Configuration error:", envValidation.error);
+      return new Response(
+        JSON.stringify({ error: envValidation.error, status: "configuration_error" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
-  );
+
+    await sendDailyDigests();
+
+    return new Response(
+      JSON.stringify({ success: true, message: "Daily digests sent" }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error("[send-daily-digest] Function error:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to send digests" }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
+  }
 });
