@@ -77,19 +77,20 @@
 
 ---
 
-### Epic 5: Rules Engine
-- [ ] Rules schema (JSONB)
-- [ ] Rules UI (create/edit)
-- [ ] Conditions builder
-- [ ] Actions builder
-- [ ] Rules evaluation engine
-- [ ] Rules scheduler (pg_cron)
-- [ ] Suggestion vs Automatic modes
-- [ ] Execution history
-- [ ] Impact estimation
-- [ ] Rules management UI
+### Epic 5: Rules Engine (50% DONE)
+- [x] Rules schema & data structures (TypeScript interfaces)
+- [x] Rules evaluation engine (conditions, combinators, action templates)
+- [x] Suggestion vs Automatic modes support
+- [x] Impact estimation for rule execution
+- [x] Rule validation & templates
+- [x] RulesManager UI component
+- [x] Rules management page (/dashboard/rules)
+- [ ] Rules scheduler (pg_cron Edge Function)
+- [ ] Execution history & tracking
+- [ ] Advanced conditions builder UI
+- [ ] Rule test mode
 
-**Status:** 📋 Pending
+**Files Created:** 4 | **Status:** ⏳ UI & logic complete
 
 ---
 
@@ -119,9 +120,9 @@
 | 2: Meta API | ⏳ In Progress | 85% | 12 |
 | 3: Dashboard | ⏳ In Progress | 70% | 12 |
 | 4: AI Agent | ⏳ In Progress | 55% | 6 |
-| 5: Rules | 📋 Pending | 0% | 0 |
+| 5: Rules | ⏳ In Progress | 50% | 4 |
 | 6: Notifications | 📋 Pending | 0% | 0 |
-| **TOTAL** | | **60%** | **42** |
+| **TOTAL** | | **67%** | **46** |
 
 ---
 
