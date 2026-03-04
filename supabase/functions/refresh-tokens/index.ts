@@ -1,8 +1,24 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// Validate required environment variables
+function validateEnvVars(): { valid: boolean; error?: string } {
+  const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'META_CLIENT_ID', 'META_CLIENT_SECRET'];
+  for (const varName of required) {
+    if (!Deno.env.get(varName)) {
+      return { valid: false, error: `Missing environment variable: ${varName}` };
+    }
+  }
+  return { valid: true };
+}
+
+const envValidation = validateEnvVars();
+if (!envValidation.valid) {
+  console.error('Configuration error:', envValidation.error);
+}
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
 interface TokenRefreshResult {
   account_id: string;
@@ -14,6 +30,22 @@ interface TokenRefreshResult {
 
 serve(async (req) => {
   try {
+    // Validate env vars before proceeding
+    if (!envValidation.valid) {
+      return new Response(
+        JSON.stringify({ error: envValidation.error, status: 'configuration_error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return new Response(
+        JSON.stringify({ error: 'Supabase credentials not configured', status: 'configuration_error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[refresh-tokens] Starting token refresh job');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get all accounts with tokens expiring in next 24 hours
