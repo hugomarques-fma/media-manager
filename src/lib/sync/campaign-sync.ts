@@ -1,7 +1,7 @@
 import { createServiceRoleClient } from '@/lib/supabase-server';
 import { createMetaAPIClient } from '@/lib/meta-api';
 
-interface SyncResult {
+export interface SyncResult {
   campaignsCreated: number;
   campaignsUpdated: number;
   adSetsCreated: number;
