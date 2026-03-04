@@ -4,8 +4,7 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
-  const cookieStore = await cookies();
-  const supabase = createServerSupabaseClient(cookieStore);
+  const supabase = createServerSupabaseClient();
 
   try {
     const {
@@ -89,8 +88,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const cookieStore = await cookies();
-  const supabase = createServerSupabaseClient(cookieStore);
+  const supabase = createServerSupabaseClient();
 
   try {
     const {

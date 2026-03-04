@@ -6,8 +6,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const cookieStore = await cookies();
-  const supabase = createServerSupabaseClient(cookieStore);
+  const supabase = createServerSupabaseClient();
 
   try {
     const {
@@ -72,8 +71,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const cookieStore = await cookies();
-  const supabase = createServerSupabaseClient(cookieStore);
+  const supabase = createServerSupabaseClient();
 
   try {
     const {
