@@ -1,8 +1,21 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// Validate environment variables
+function validateEnvVars(): { valid: boolean; error?: string } {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return { valid: false, error: 'Missing Supabase environment variables' };
+  }
+
+  return { valid: true };
+}
+
+const envValidation = validateEnvVars();
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const metaApiVersion = 'v21.0';
 
 interface MetricsData {
@@ -19,9 +32,20 @@ interface MetricsData {
 
 serve(async (req) => {
   try {
+    // Validate env vars before proceeding
+    if (!envValidation.valid) {
+      console.error('Configuration error:', envValidation.error);
+      return new Response(
+        JSON.stringify({ error: envValidation.error, status: 'configuration_error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const requestBody = await req.json().catch(() => ({}));
     const targetDate = requestBody.date || new Date().toISOString().split('T')[0];
+
+    console.log('[capture-metrics] Starting metrics capture for date:', targetDate);
 
     // Get all connected accounts
     const { data: accounts, error: accountsError } = await supabase
@@ -49,7 +73,9 @@ serve(async (req) => {
           .eq('ad_account_id', account.id);
 
         if (campaignError) {
-          errors.push(`Failed to fetch campaigns for account ${account.id}: ${campaignError.message}`);
+          const errMsg = `Failed to fetch campaigns for account ${account.id}: ${campaignError.message}`;
+          console.warn('[capture-metrics]', errMsg);
+          errors.push(errMsg);
           continue;
         }
 
@@ -158,7 +184,7 @@ serve(async (req) => {
     }
 
     console.log(
-      `Metrics capture completed: ${totalCaptured} metrics captured, ${errors.length} errors`
+      `[capture-metrics] Metrics capture completed: ${totalCaptured} metrics captured, ${errors.length} errors`
     );
 
     return new Response(
@@ -171,7 +197,7 @@ serve(async (req) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Metrics capture error:', error);
+    console.error('[capture-metrics] Error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500 }
