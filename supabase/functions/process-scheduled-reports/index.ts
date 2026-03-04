@@ -1,6 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.0";
 
+// Validate environment variables
+function validateEnvVars(): { valid: boolean; error?: string } {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return { valid: false, error: "Missing Supabase environment variables" };
+  }
+
+  return { valid: true };
+}
+
+const envValidation = validateEnvVars();
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";
@@ -142,13 +155,15 @@ async function sendReport(report: ScheduledReport, htmlContent: string) {
 
 async function processScheduledReports() {
   try {
+    console.log("[process-scheduled-reports] Starting scheduled report processing");
+
     // Get all scheduled reports
     const { data: reports, error: reportsError } = await supabase
       .from("scheduled_reports")
       .select("*");
 
     if (reportsError || !reports) {
-      console.error("Failed to fetch reports:", reportsError);
+      console.error("[process-scheduled-reports] Failed to fetch reports:", reportsError);
       return;
     }
 
@@ -175,13 +190,15 @@ async function processScheduledReports() {
           .update({ last_run_at: new Date().toISOString() })
           .eq("id", report.id);
 
-        console.log(`Report ${report.name} sent successfully`);
+        console.log(`[process-scheduled-reports] Report ${report.name} sent successfully`);
       } catch (error) {
-        console.error(`Error processing report ${report.id}:`, error);
+        console.error(`[process-scheduled-reports] Error processing report ${report.id}:`, error);
       }
     }
+
+    console.log("[process-scheduled-reports] Report processing completed");
   } catch (error) {
-    console.error("Report processing error:", error);
+    console.error("[process-scheduled-reports] Report processing error:", error);
   }
 }
 
@@ -190,13 +207,33 @@ serve(async (req) => {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  await processScheduledReports();
-
-  return new Response(
-    JSON.stringify({ success: true, message: "Reports processed" }),
-    {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
+  try {
+    // Validate env vars before proceeding
+    if (!envValidation.valid) {
+      console.error("Configuration error:", envValidation.error);
+      return new Response(
+        JSON.stringify({ error: envValidation.error, status: "configuration_error" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
-  );
+
+    await processScheduledReports();
+
+    return new Response(
+      JSON.stringify({ success: true, message: "Reports processed" }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error("[process-scheduled-reports] Function error:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to process reports" }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
+  }
 });
