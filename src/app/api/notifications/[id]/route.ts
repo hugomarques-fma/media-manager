@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -7,7 +7,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   const cookieStore = await cookies();
-  const supabase = createServerClient(cookieStore);
+  const supabase = createServerSupabaseClient(cookieStore);
 
   try {
     const {
@@ -73,7 +73,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const cookieStore = await cookies();
-  const supabase = createServerClient(cookieStore);
+  const supabase = createServerSupabaseClient(cookieStore);
 
   try {
     const {

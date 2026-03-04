@@ -1,11 +1,11 @@
-import { createServerClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { validatePaginationParams, validateAccountId } from '@/lib/validation';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
-  const supabase = createServerClient(cookieStore);
+  const supabase = createServerSupabaseClient(cookieStore);
 
   try {
     // Get user
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
-  const supabase = createServerClient(cookieStore);
+  const supabase = createServerSupabaseClient(cookieStore);
 
   try {
     const {

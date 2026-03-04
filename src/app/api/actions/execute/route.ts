@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     // Get campaign details
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
-      .select('id, meta_campaign_id, ad_account_id')
+      .select('id, meta_campaign_id, ad_account_id, status')
       .eq('id', campaignId)
       .single();
 
