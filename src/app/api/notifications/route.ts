@@ -1,4 +1,5 @@
 import { createServerClient } from '@/lib/supabase';
+import { validatePaginationParams, validateAccountId } from '@/lib/validation';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -20,8 +21,29 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get('accountId');
     const filter = searchParams.get('filter') || 'all';
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const offset = parseInt(searchParams.get('offset') || '0');
+
+    // Validate pagination params
+    const paginationValidation = validatePaginationParams(
+      searchParams.get('limit'),
+      searchParams.get('offset')
+    );
+    if (!paginationValidation.valid) {
+      return NextResponse.json(
+        { error: paginationValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // Validate accountId format
+    const accountIdValidation = validateAccountId(accountId);
+    if (!accountIdValidation.valid) {
+      return NextResponse.json(
+        { error: accountIdValidation.error },
+        { status: 400 }
+      );
+    }
+
+    const { limit, offset } = paginationValidation;
 
     let query = supabase
       .from('notifications')
@@ -90,6 +112,15 @@ export async function POST(request: NextRequest) {
     if (!accountId || !type || !title || !message) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Validate accountId format
+    const accountIdValidation = validateAccountId(accountId);
+    if (!accountIdValidation.valid) {
+      return NextResponse.json(
+        { error: accountIdValidation.error },
         { status: 400 }
       );
     }
