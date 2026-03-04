@@ -8,7 +8,7 @@ import CampaignsTable from '@/components/CampaignsTable';
 import SpendDistribution from '@/components/SpendDistribution';
 import SyncStatus from '@/components/SyncStatus';
 import ExportControls from '@/components/ExportControls';
-import KPICard from '@/components/KPICard';
+import { KPICard } from '@/components/KPICard';
 
 interface AccountData {
   id: string;

@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase-server';
 import { validatePaginationParams, validateAccountId } from '@/lib/validation';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';

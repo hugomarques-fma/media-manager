@@ -1,4 +1,4 @@
-import { createServiceRoleClient } from '@/lib/supabase';
+import { createServiceRoleClient } from '@/lib/supabase-server';
 
 interface CampaignData {
   id: string;

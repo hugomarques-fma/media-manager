@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { syncCampaigns } from '@/lib/sync/campaign-sync';
 import { NextRequest, NextResponse } from 'next/server';
 

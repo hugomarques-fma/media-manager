@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { createBrowserSupabaseClient } from '@/lib/supabase';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
+  const supabase = createBrowserSupabaseClient();
 
   useEffect(() => {
     const msg = searchParams.get('message');

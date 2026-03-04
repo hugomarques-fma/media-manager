@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { createMetaAPIClient } from '@/lib/meta-api';
 import { NextRequest, NextResponse } from 'next/server';
 

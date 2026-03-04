@@ -1,4 +1,4 @@
-import { createServiceRoleClient } from '@/lib/supabase';
+import { createServiceRoleClient } from '@/lib/supabase-server';
 import { createMetaAPIClient } from '@/lib/meta-api';
 
 interface MetricsData {
