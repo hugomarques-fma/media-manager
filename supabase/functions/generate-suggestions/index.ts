@@ -1,8 +1,21 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// Validate environment variables
+function validateEnvVars(): { valid: boolean; error?: string } {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return { valid: false, error: 'Missing Supabase environment variables' };
+  }
+
+  return { valid: true };
+}
+
+const envValidation = validateEnvVars();
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
 interface MetricsData {
   spend: number;
@@ -18,7 +31,18 @@ interface MetricsData {
 
 serve(async (req) => {
   try {
+    // Validate env vars before proceeding
+    if (!envValidation.valid) {
+      console.error('Configuration error:', envValidation.error);
+      return new Response(
+        JSON.stringify({ error: envValidation.error, status: 'configuration_error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log('[generate-suggestions] Starting suggestion generation');
 
     // Get all accounts
     const { data: accounts, error: accountsError } = await supabase
@@ -109,7 +133,7 @@ serve(async (req) => {
     }
 
     console.log(
-      `Suggestion generation completed: ${totalSuggestionsCreated} suggestions created, ${errors.length} errors`
+      `[generate-suggestions] Suggestion generation completed: ${totalSuggestionsCreated} suggestions created, ${errors.length} errors`
     );
 
     return new Response(
@@ -121,7 +145,7 @@ serve(async (req) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Suggestion generation error:', error);
+    console.error('[generate-suggestions] Error:', error);
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'Unknown error',
