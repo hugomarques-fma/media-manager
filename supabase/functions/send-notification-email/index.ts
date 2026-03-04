@@ -1,6 +1,46 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.0";
 
+// Validate environment variables
+function validateEnvVars(): { valid: boolean; error?: string } {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return { valid: false, error: "Missing Supabase environment variables" };
+  }
+
+  return { valid: true };
+}
+
+// Retry helper with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  initialDelayMs: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.warn(
+        `[send-notification-email] Attempt ${attempt + 1} failed: ${lastError.message}. Retrying...`
+      );
+
+      if (attempt < maxRetries - 1) {
+        const delayMs = initialDelayMs * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  throw lastError || new Error("Max retries exceeded");
+}
+
+const envValidation = validateEnvVars();
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";
@@ -20,7 +60,7 @@ interface NotificationPayload {
 
 async function sendNotificationEmail(payload: NotificationPayload) {
   if (!resendApiKey) {
-    console.warn("RESEND_API_KEY not configured, skipping email");
+    console.warn("[send-notification-email] RESEND_API_KEY not configured, skipping email");
     return;
   }
 
@@ -29,7 +69,7 @@ async function sendNotificationEmail(payload: NotificationPayload) {
     const { data: userData, error: userError } = await supabase.auth.admin.getUserById(payload.userId);
 
     if (userError || !userData.user?.email) {
-      console.error("Failed to get user email:", userError);
+      console.error("[send-notification-email] Failed to get user email:", userError);
       return;
     }
 
@@ -51,30 +91,33 @@ async function sendNotificationEmail(payload: NotificationPayload) {
       </div>
     `;
 
-    // Send email via Resend
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: "notifications@media-manager.local",
-        to: userEmail,
-        subject: subject,
-        html: htmlContent,
-      }),
-    });
+    // Send email via Resend with retry
+    const response = await retryWithBackoff(() =>
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${resendApiKey}`,
+        },
+        body: JSON.stringify({
+          from: "notifications@media-manager.local",
+          to: userEmail,
+          subject: subject,
+          html: htmlContent,
+        }),
+      })
+    );
 
     if (!response.ok) {
       const error = await response.json();
-      console.error("Failed to send email:", error);
-      return;
+      console.error("[send-notification-email] Failed to send email:", error);
+      throw new Error(`Resend API error: ${error.message}`);
     }
 
-    console.log(`Email sent successfully to ${userEmail}`);
+    console.log(`[send-notification-email] Email sent successfully to ${userEmail}`);
   } catch (error) {
-    console.error("Error sending notification email:", error);
+    console.error("[send-notification-email] Error sending notification email:", error);
+    throw error;
   }
 }
 
@@ -84,6 +127,15 @@ serve(async (req) => {
   }
 
   try {
+    // Validate env vars before proceeding
+    if (!envValidation.valid) {
+      console.error("Configuration error:", envValidation.error);
+      return new Response(
+        JSON.stringify({ error: envValidation.error, status: "configuration_error" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const payload: NotificationPayload = await req.json();
 
     // Only send email for critical and high priority notifications
